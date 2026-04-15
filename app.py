@@ -11,6 +11,32 @@ import math
 from flask import send_file
 
 
+def read_secret_file(path):
+    if not os.path.exists(path):
+        return None
+
+    with open(path, 'r', encoding='utf-8') as secret_file:
+        return secret_file.read().strip()
+
+
+def get_config_value(*keys):
+    for key in keys:
+        value = os.environ.get(key)
+        if value:
+            return value
+
+    for key in keys:
+        for candidate in (
+            os.path.join('.', key),
+            os.path.join('/etc/secrets', key),
+        ):
+            value = read_secret_file(candidate)
+            if value:
+                return value
+
+    return None
+
+
 def load_env_file(env_path='.env'):
     if not os.path.exists(env_path):
         return
@@ -48,8 +74,8 @@ def is_render_environment():
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'smartedutrack-dev-key')
-database_url = normalize_database_url(os.environ.get('DATABASE_URL'))
+app.config['SECRET_KEY'] = get_config_value('SECRET_KEY', 'SECRET KEY') or 'smartedutrack-dev-key'
+database_url = normalize_database_url(get_config_value('DATABASE_URL', 'DATABASE URL'))
 if not database_url:
     if is_render_environment():
         raise RuntimeError('DATABASE_URL is required on Render. Configure your PostgreSQL connection in the Render environment settings.')
