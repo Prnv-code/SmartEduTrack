@@ -30,11 +30,30 @@ def load_env_file(env_path='.env'):
 
 load_env_file()
 
+
+def normalize_database_url(raw_url):
+    if not raw_url:
+        return raw_url
+    if raw_url.startswith('postgresql+psycopg://'):
+        return raw_url
+    if raw_url.startswith('postgresql://'):
+        return raw_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    if raw_url.startswith('postgres://'):
+        return raw_url.replace('postgres://', 'postgresql+psycopg://', 1)
+    return raw_url
+
+
+def is_render_environment():
+    return any(os.environ.get(key) for key in ('RENDER', 'RENDER_SERVICE_ID', 'RENDER_EXTERNAL_URL'))
+
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'smartedutrack-dev-key')
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///smartedutrack_dev.db')
-if database_url.startswith('postgresql://'):
-    database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+database_url = normalize_database_url(os.environ.get('DATABASE_URL'))
+if not database_url:
+    if is_render_environment():
+        raise RuntimeError('DATABASE_URL is required on Render. Configure your PostgreSQL connection in the Render environment settings.')
+    database_url = 'sqlite:///smartedutrack_dev.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
