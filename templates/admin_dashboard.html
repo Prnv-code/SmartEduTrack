@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard - SmartEduTrack{% endblock %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">Admin Dashboard</h1>
+                <p class="text-muted">Manage users, subjects, and sessions for the SmartEduTrack demo.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-header">Users</div>
+            <div class="card-body">
+                <p class="display-6">{{ users|length }}</p>
+                <ul class="list-group list-group-flush">
+                    {% for user in users[:8] %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>{{ user.name }}</span>
+                            <span class="badge bg-secondary">{{ user.role }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-header">Subjects</div>
+            <div class="card-body">
+                <p class="display-6">{{ subjects|length }}</p>
+                <ul class="list-group list-group-flush">
+                    {% for subject in subjects[:8] %}
+                        <li class="list-group-item">{{ subject.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-header">Sessions</div>
+            <div class="card-body">
+                <p class="display-6">{{ sessions|length }}</p>
+                <ul class="list-group list-group-flush">
+                    {% for class_session in sessions[:8] %}
+                        <li class="list-group-item">
+                            {{ class_session.subject.name }} - {{ class_session.date }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
