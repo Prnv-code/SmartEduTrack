@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+*.log
+instance/*.db
+instance/*.db-journal
+static/images/dynamic_qr_*.png
+static/images/qr_*.png
+*.db
+*.db-journal

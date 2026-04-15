@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Student Dashboard - QR-Attendance Hub{% endblock %}
+{% block title %}Student Dashboard - SmartEduTrack{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 {% endblock %}
@@ -23,6 +23,51 @@
                 <p class="mb-1"><i class="fas fa-check-circle me-2 text-success"></i>{{ total_present|default(0) }} Present</p>
                 <p class="mb-1"><i class="fas fa-times-circle me-2 text-danger"></i>{{ subject_stats.values()|sum(attribute='missed')|default(0) }} Missed</p>
                 <p class="mb-0"><i class="fas fa-percentage me-2 text-info"></i>{{ overall_percent|default(0) }}% Overall</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-6 mb-3 mb-lg-0">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="mb-0"><i class="fas fa-book-open me-2 text-primary"></i>Assigned Subjects</h2>
+            </div>
+            <div class="card-body">
+                {% if assigned_subjects %}
+                    <ul class="list-group list-group-flush">
+                        {% for subject in assigned_subjects %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ subject.name }}</span>
+                                <small class="text-muted">{{ subject.teacher.name }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No subjects linked yet. Assign subjects during signup or from the database.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h2 class="mb-0"><i class="fas fa-people-roof me-2 text-info"></i>Linked Parents</h2>
+            </div>
+            <div class="card-body">
+                {% if linked_parents %}
+                    <ul class="list-group list-group-flush">
+                        {% for link in linked_parents %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ link.parent.name }}</span>
+                                <small class="text-muted">{{ link.relationship_type or 'Guardian' }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">No parent or guardian linked yet.</p>
+                {% endif %}
             </div>
         </div>
     </div>

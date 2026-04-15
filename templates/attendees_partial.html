@@ -4,7 +4,12 @@
     {% for attendee in attendees %}
         <li class="attendee-item">
             <span><i class="fas fa-user-check me-2 text-success"></i>{{ attendee.name }}</span>
-            <small class="text-muted">{{ attendee.scan_time.strftime('%H:%M:%S') }}</small>
+            <small class="text-muted">
+                {{ attendee.scan_time.strftime('%H:%M:%S') }}
+                {% if attendee.verified_by_geofence %}
+                    | GPS verified{% if attendee.distance_meters is not none %}: {{ attendee.distance_meters|round(1) }}m{% endif %}
+                {% endif %}
+            </small>
         </li>
     {% endfor %}
     </ul>

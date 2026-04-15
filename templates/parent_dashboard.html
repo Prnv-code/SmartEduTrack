@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Parent Dashboard - SmartEduTrack{% endblock %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title">Parent / Guardian Dashboard</h1>
+                <p class="text-muted mb-2">Track linked students, their assigned subjects, and attendance coverage.</p>
+                {% if parent_profile %}
+                    <div class="small text-muted">
+                        <span class="me-3"><strong>Phone:</strong> {{ parent_profile.phone or 'Not added' }}</span>
+                        <span class="me-3"><strong>Occupation:</strong> {{ parent_profile.occupation or 'Not added' }}</span>
+                        <span><strong>Relation:</strong> {{ parent_profile.relation_label or 'Guardian' }}</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">Linked Students</h2>
+            </div>
+            <div class="card-body">
+                {% if children %}
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Relationship</th>
+                                    <th>Subjects</th>
+                                    <th>Attendance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for child in children %}
+                                    <tr>
+                                        <td>{{ child.student.name }}</td>
+                                        <td>{{ child.relationship_type or 'Guardian' }}</td>
+                                        <td>
+                                            {% if child.subjects %}
+                                                {{ child.subjects | map(attribute='name') | join(', ') }}
+                                            {% else %}
+                                                <span class="text-muted">No subjects linked</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ child.attendance_count }}/{{ child.session_count }} ({{ child.attendance_percent }}%)</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No student accounts are linked yet. Add student emails while creating the parent account to connect them.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

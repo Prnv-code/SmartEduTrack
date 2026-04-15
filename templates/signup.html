@@ -1,41 +1,149 @@
 {% extends 'base.html' %}
-{% block title %}Sign Up - QR-Attendance Hub{% endblock %}
+{% block title %}Sign Up - SmartEduTrack{% endblock %}
 {% block content %}
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header text-center">
-                    <h2>Sign Up</h2>
-                </div>
-                <div class="card-body">
-                    <form method="POST">
-                        <div class="mb-3">
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2>Create Account</h2>
+                <p class="text-muted mb-0">Store role-specific information and build relationships while signing up.</p>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-6">
                             <label for="email" class="form-label">Email</label>
                             <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
                         </div>
-                        <div class="mb-3">
+                        <div class="col-md-6">
                             <label for="name" class="form-label">Full Name</label>
                             <input type="text" class="form-control" id="name" name="name" placeholder="Full Name" required>
                         </div>
-                        <div class="mb-3">
+                        <div class="col-md-6">
                             <label for="password" class="form-label">Password</label>
                             <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
                         </div>
-                        <div class="mb-3">
+                        <div class="col-md-6">
                             <label for="role" class="form-label">Role</label>
-                            <select class="form-select" id="role" name="role" required>
+                            <select class="form-select" id="role" name="role" required onchange="toggleRoleSections()">
                                 <option value="">Select Role</option>
                                 <option value="teacher">Teacher</option>
                                 <option value="student">Student</option>
+                                <option value="parent">Parent / Guardian</option>
+                                <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Sign Up</button>
-                    </form>
-                    <div class="mt-3 text-center">
-                        <a href="{{ url_for('login') }}">Already have an account? Log in</a>
                     </div>
+
+                    <div id="teacher-fields" class="mt-4 d-none">
+                        <h5>Teacher Information</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="employee_code" class="form-label">Employee Code</label>
+                                <input type="text" class="form-control" id="employee_code" name="employee_code" placeholder="TCH-101">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="department" class="form-label">Department</label>
+                                <input type="text" class="form-control" id="department" name="department" placeholder="Science Department">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="teacher_phone" class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="teacher_phone" name="teacher_phone" placeholder="+91 98765 43210">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="qualification" class="form-label">Qualification</label>
+                                <input type="text" class="form-control" id="qualification" name="qualification" placeholder="M.Ed, B.Sc">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="student-fields" class="mt-4 d-none">
+                        <h5>Student Information</h5>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="admission_number" class="form-label">Admission Number</label>
+                                <input type="text" class="form-control" id="admission_number" name="admission_number" placeholder="STD-2026-01">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="grade" class="form-label">Class / Grade</label>
+                                <input type="text" class="form-control" id="grade" name="grade" placeholder="10">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="section" class="form-label">Section</label>
+                                <input type="text" class="form-control" id="section" name="section" placeholder="A">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="student_phone" class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="student_phone" name="student_phone" placeholder="+91 98765 43210">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="parent_emails" class="form-label">Parent Emails</label>
+                                <input type="text" class="form-control" id="parent_emails" name="parent_emails" placeholder="parent1@example.com, parent2@example.com">
+                                <div class="form-text">Use existing parent account emails to link immediately.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="relationship_type" class="form-label">Relationship Label</label>
+                                <input type="text" class="form-control" id="relationship_type" name="relationship_type" placeholder="Mother / Father / Guardian">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="student_address" class="form-label">Address</label>
+                                <input type="text" class="form-control" id="student_address" name="student_address" placeholder="City, State">
+                            </div>
+                            <div class="col-12">
+                                <label for="subject_ids" class="form-label">Assign Subjects</label>
+                                <select class="form-select" id="subject_ids" name="subject_ids" multiple size="6">
+                                    {% for subject in subjects %}
+                                        <option value="{{ subject.id }}">{{ subject.name }} - {{ subject.teacher.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Hold Ctrl or Command to select multiple subjects.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="parent-fields" class="mt-4 d-none">
+                        <h5>Parent / Guardian Information</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="parent_phone" class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="parent_phone" name="parent_phone" placeholder="+91 98765 43210">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="occupation" class="form-label">Occupation</label>
+                                <input type="text" class="form-control" id="occupation" name="occupation" placeholder="Engineer, Doctor, Business">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="relation_label" class="form-label">Default Relationship</label>
+                                <input type="text" class="form-control" id="relation_label" name="relation_label" placeholder="Mother / Father / Guardian">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="student_emails" class="form-label">Student Emails</label>
+                                <input type="text" class="form-control" id="student_emails" name="student_emails" placeholder="student1@example.com, student2@example.com">
+                                <div class="form-text">Use existing student account emails to build the family link.</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="parent_address" class="form-label">Address</label>
+                                <input type="text" class="form-control" id="parent_address" name="parent_address" placeholder="City, State">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mt-4">Sign Up</button>
+                </form>
+                <div class="mt-3 text-center">
+                    <a href="{{ url_for('login') }}">Already have an account? Log in</a>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<script>
+    function toggleRoleSections() {
+        const role = document.getElementById('role').value;
+        document.getElementById('teacher-fields').classList.toggle('d-none', role !== 'teacher');
+        document.getElementById('student-fields').classList.toggle('d-none', role !== 'student');
+        document.getElementById('parent-fields').classList.toggle('d-none', role !== 'parent');
+    }
+</script>
 {% endblock %}

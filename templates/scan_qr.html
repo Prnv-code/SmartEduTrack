@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Scan QR - QR-Attendance Hub{% endblock %}
+{% block title %}Scan QR - SmartEduTrack{% endblock %}
 {% block extra_css %}
 <style>
     .scanner-card {
@@ -109,82 +109,174 @@
     const progressBar = document.querySelector('.progress');
     const progressFill = document.querySelector('.progress-bar');
     let scanInterval;
+    let lastLocation = null;
+    let locationPrimed = false;
+    let isScannerRunning = false;
+    let isProcessingScan = false;
+
+    function setStatus(message, type = 'success') {
+        statusText.innerHTML = message;
+        statusDiv.classList.remove('d-none', 'status-success', 'status-error');
+        statusDiv.classList.add(type === 'error' ? 'status-error' : 'status-success');
+    }
+
+    function resetProgress() {
+        clearInterval(scanInterval);
+        progressFill.style.width = '0%';
+        progressBar.style.display = 'none';
+    }
+
+    function primeLocation(showWaitingMessage = false) {
+        if (!navigator.geolocation) {
+            setStatus('Location is required, but your browser does not support geolocation.', 'error');
+            return Promise.reject(new Error('Geolocation unavailable'));
+        }
+
+        if (showWaitingMessage) {
+            setStatus('Waiting for location permission... <i class="fas fa-spinner fa-spin ms-2"></i>');
+        }
+
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    lastLocation = position;
+                    locationPrimed = true;
+                    resolve(position);
+                },
+                (error) => {
+                    locationPrimed = false;
+                    reject(error);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }
+            );
+        });
+    }
+
+    function stopScanner() {
+        if (!isScannerRunning) {
+            return Promise.resolve();
+        }
+
+        return html5QrCode.stop().then(() => {
+            isScannerRunning = false;
+            startScanBtn.style.display = 'inline-block';
+            stopScanBtn.style.display = 'none';
+        }).catch((err) => {
+            console.error('Stop error:', err);
+        });
+    }
+
+    function submitAttendance(decodedText, position) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/mark_attendance';
+
+        const qrInput = document.createElement('input');
+        qrInput.type = 'hidden';
+        qrInput.name = 'totp_code';
+        qrInput.value = decodedText;
+        form.appendChild(qrInput);
+
+        if (position) {
+            const latitudeInput = document.createElement('input');
+            latitudeInput.type = 'hidden';
+            latitudeInput.name = 'latitude';
+            latitudeInput.value = position.coords.latitude;
+            form.appendChild(latitudeInput);
+
+            const longitudeInput = document.createElement('input');
+            longitudeInput.type = 'hidden';
+            longitudeInput.name = 'longitude';
+            longitudeInput.value = position.coords.longitude;
+            form.appendChild(longitudeInput);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function requestLocationAndSubmit(decodedText) {
+        setStatus('Checking classroom location... <i class="fas fa-spinner fa-spin ms-2"></i>');
+        const locationPromise = locationPrimed && lastLocation
+            ? Promise.resolve(lastLocation)
+            : primeLocation(false);
+
+        locationPromise
+            .then((position) => submitAttendance(decodedText, position))
+            .catch(() => {
+                isProcessingScan = false;
+                resetProgress();
+                setStatus('Location permission is required before attendance can be marked.', 'error');
+            });
+    }
 
     startScanBtn.addEventListener('click', () => {
-        html5QrCode.start(
-            { facingMode: "environment" },  // Back camera
-            { fps: 20, qrbox: { width: 300, height: 300 } },  // Faster FPS, larger detection box for quicker scans
-            (decodedText, decodedResult) => {
-                console.log('Scanned:', decodedText);  // Debug: Check decode in console
-                // On scan: Animate progress, then mark
-                progressBar.style.display = 'block';
-                let progress = 0;
-                scanInterval = setInterval(() => {
-                    progress += 10;
-                    progressFill.style.width = progress + '%';
-                    if (progress >= 100) {
-                        clearInterval(scanInterval);
-                        statusText.innerHTML = 'Marking attendance... <i class="fas fa-spinner fa-spin ms-2"></i>';
-                        statusDiv.classList.add('status-success');
-                        statusDiv.classList.remove('d-none');
+        if (isScannerRunning || isProcessingScan) {
+            return;
+        }
 
-                        // Auto-submit form
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '/mark_attendance';
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = 'totp_code';
-                        input.value = decodedText;
-                        form.appendChild(input);
-                        document.body.appendChild(form);
-                        form.submit();
+        startScanBtn.disabled = true;
+        primeLocation(true)
+            .catch(() => {
+                setStatus('Allow location access first, then start the scanner again.', 'error');
+                throw new Error('Location permission failed');
+            })
+            .then(() => html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 12, qrbox: { width: 280, height: 280 } },
+                (decodedText) => {
+                    if (isProcessingScan) {
+                        return;
                     }
-                }, 80);  // Faster animation
-            },
-            (error) => {
-                // Continuous scan error—show friendly
-                console.error('Scan error:', error);  // Debug log
-                if (error && (error.includes('Permission') || error.includes('NotAllowed'))) {
-                    statusText.innerHTML = 'Camera permission denied. Check browser settings and retry.';
-                    statusDiv.classList.add('status-error');
-                } else if (error && error.includes('No MultiFormat Readers')) {
-                    statusText.innerHTML = 'QR not detected. Move closer, improve lighting, or try again.';
-                    statusDiv.classList.add('status-error');
-                } else {
-                    statusText.innerHTML = 'Scan error: ' + (error || 'Unknown issue') + '. Retry.';
-                    statusDiv.classList.add('status-error');
+
+                    isProcessingScan = true;
+                    stopScanner();
+                    progressBar.style.display = 'block';
+                    let progress = 0;
+                    scanInterval = setInterval(() => {
+                        progress += 10;
+                        progressFill.style.width = progress + '%';
+                        if (progress >= 100) {
+                            clearInterval(scanInterval);
+                            setStatus('Marking attendance... <i class="fas fa-spinner fa-spin ms-2"></i>');
+                            requestLocationAndSubmit(decodedText);
+                        }
+                    }, 80);
+                },
+                (error) => {
+                    if (error && (error.includes('Permission') || error.includes('NotAllowed'))) {
+                        console.error('Scan error:', error);
+                        setStatus('Camera permission denied. Check browser settings and retry.', 'error');
+                    }
                 }
-                statusDiv.classList.remove('d-none');
-            }
-        ).then(() => {
-            startScanBtn.style.display = 'none';
-            stopScanBtn.style.display = 'inline-block';
-            statusText.innerHTML = 'Scanning... Hold steady! <i class="fas fa-spinner fa-spin ms-2"></i>';
-            statusDiv.classList.add('status-success');
-            statusDiv.classList.remove('d-none');
-        }).catch((err) => {
-            console.error('Start error:', err);
-            statusText.innerHTML = 'Error starting scanner: ' + err + '. Check camera and retry.';
-            statusDiv.classList.add('status-error');
-            statusDiv.classList.remove('d-none');
-        });
+            ))
+            .then(() => {
+                isScannerRunning = true;
+                startScanBtn.style.display = 'none';
+                stopScanBtn.style.display = 'inline-block';
+                setStatus('Scanning... Hold steady on the live QR code. <i class="fas fa-spinner fa-spin ms-2"></i>');
+            })
+            .catch((err) => {
+                console.error('Start error:', err);
+                if (err.message !== 'Location permission failed') {
+                    setStatus('Error starting scanner. Check camera and location permissions, then retry.', 'error');
+                }
+            })
+            .finally(() => {
+                startScanBtn.disabled = false;
+            });
     });
 
     stopScanBtn.addEventListener('click', () => {
-        html5QrCode.stop().then(() => {
-            startScanBtn.style.display = 'inline-block';
-            stopScanBtn.style.display = 'none';
-            statusText.innerHTML = 'Scanner stopped.';
-            statusDiv.classList.remove('status-success', 'status-error');
-            progressBar.style.display = 'none';
-            clearInterval(scanInterval);
-        }).catch(err => console.error('Stop error:', err));
+        isProcessingScan = false;
+        stopScanner().then(() => {
+            setStatus('Scanner stopped.');
+            resetProgress();
+        });
     });
 
-    // Auto-start on mobile for UX (optional - comment out if annoying)
     if (/Mobi|Android/i.test(navigator.userAgent)) {
-        setTimeout(() => startScanBtn.click(), 1000);  // Delay 1s for load
+        setTimeout(() => startScanBtn.click(), 1000);
     }
 </script>
 {% endblock %}
